@@ -13,6 +13,17 @@ def print_plan(p):
             print("{:4}".format(x[i][0]) + "\t{:4}".format(x[i][1]) + "\t{:9.7f}".format(p[i]))
     print()
 
+def generate_plan(x_t):
+    x = np.zeros((n, 2))
+    i = 0 
+    for x1 in x_t:
+        for x2 in x_t:
+            x[i][0] = x1
+            x[i][1] = x2
+            i += 1
+    p = np.ones(n) / n
+    return x, p
+
 def optimal_plan(x, p):
     proj, grad = np.zeros(n), np.zeros(n)
     solution, iter = 0, 1
@@ -63,16 +74,8 @@ def optimal_plan(x, p):
     print("Оптимальный план:")
     print_plan(p)
 
+
 x_t = [-1, -0.75, -0.25, 0, 0.25, 0.75, 1]
 n = len(x_t) ** 2
-# Начальный план
-x = np.zeros((n, 2))
-i = 0 
-for x1 in x_t:
-    for x2 in x_t:
-        x[i][0] = x1
-        x[i][1] = x2
-        i += 1
-print(x)
-p = np.ones(n) / n
+x, p = generate_plan(x_t)
 optimal_plan(x, p)
