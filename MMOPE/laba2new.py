@@ -1,271 +1,236 @@
+import math
+import json
 import numpy as np
 import matplotlib.pyplot as plt
-import random
+from numpy.linalg import inv
 
-#возвращает вектор со значениями нашей функции
-def func(x):
-    return np.array([1.0, x[0], x[1], x[0]*x[1], x[0]**2, x[1]**2])
-
-#region работа с файлами
-#считывание из файла: сначала количество элементов, потом все точки x, потом все веса p
-def read(filename):
-    f = open(filename, "r")
-    Xmass = []
-    Pmass = []
-    count = int(f.readline())
-    for i in range(count):
-        Xmass.append([float(item) for item in f.readline().split(" ")])
-    for i in range(count):
-        Pmass.append(float(f.readline()))
-    return Xmass, Pmass
-
-#Запись в файл, записывается так, чтобы потом считать
-def write(filename, x, p):
-    f = open(filename, "w")
-    f.write(str(len(x)) + "\n")
-    for i in x:
-        f.write(str(i[0]) + " " + str(i[1]) + "\n")
-    f.write(str(p[0]))
-    for i in p[1:]:
-        f.write("\n" + str(i))
-    f.close()
-
-#функция которая создает файл, с первоначальными данными
-def first_input(filename):
-    f = open(filename, "w")
-    x1 = np.arange(-1, 1.1, 0.5)
-    f.write(str(len(x1)*len(x1)) + "\n")
-    for i in x1:
-        for j in x1:
-            f.write(str(i) + " " + str(j) + "\n")
-    for i in range(24):
-        f.write(str(1/25.0) + "\n")
-    f.write((str(1/25.0)))
-    f.close()
-#endregion
-
-#region Создание матрицы М, D и работа с ними
-#создание матрицы М
-def makeM(x, p):
-    M = np.zeros((len(func(x[0])), len(func(x[0]))))
-    for i in range(len(x)):
-        M += p[i] * make_partM(func(x[i]))
-    return M
-
-#создание части матрицы, для каждого из весов
-def make_partM(fx):
-    M = np.zeros((len(fx), len(fx)))
-    for i in range(len(fx)):
-        for j in range(len(fx)):
-            M[i][j] = fx[i] * fx[j]
-    return M
-
-#создание матрицы D из матрицы М
-def makeD(M):
-    return np.linalg.inv(M)
-
-#Проверка на D-оптимальность ( вычисление критерия для заданной матрицы)
-def D_optim(M):
-    return np.linalg.det(M)
-
-#Проверка на A-оптимальность ( вычисление критерия для заданной матрицы)
-def A_optim(D):
-    return np.trace(D)
-
-#нахождение в массиве X индекса элемента, который близок к элементу x
-def findClose(x, X):
-    for i in range(len(X)):
-        vec = np.array([x[0]-X[i][0],x[1]-X[i][1]])
-        scal = np.dot(vec, vec)
-        if np.sqrt(scal)**2 < 0.1:
-            return i
-    return -1
-
-#функция нахождения максимума на сетке, для добавления новой точки
-
-"""
-def findMaxFi(grid, D):
-    max = np.dot(np.dot(func([grid[0], grid[0]]), D), func([grid[0], grid[0]]).T)
-    maxdot = [grid[0], grid[0]]
-
-    for i in grid:
-        for j in grid:
-            f = np.dot(np.dot(func([i, j]), D), func([i, j]).T)
-            if f > max:
-                max = f
-                maxdot = [i, j]
-    return max, maxdot
-
-def findMinFi(grid, D):
-    min_f = np.dot(np.dot(func([grid[0], grid[0]]), D), func([grid[0], grid[0]]).T)
-    mindot = [grid[0], grid[0]]
-
-    for i in grid:
-        for j in grid:
-            f = np.dot(np.dot(func([i, j]), D), func([i, j]).T)
-            if f < min_f:
-                min_f = f
-                mindot = [i, j]
-    return min_f, mindot
-"""
-
-def findMaxFi(grid, D):
-    max_f = np.dot(np.dot(func([grid[0], grid[0]]), np.linalg.matrix_power(D, 2)), func([grid[0], grid[0]]).T)
-    maxdot = [grid[0], grid[0]]
-
-    for i in grid:
-        for j in grid:
-            f = np.dot(np.dot(func([i, j]), np.linalg.matrix_power(D, 2)), func([i, j]).T)
-            if f > max_f:
-                max_f = f
-                maxdot = [i, j]
-    return max_f, maxdot
-
-#Подбор веса для новой точки
-"""
-def addToP(curientD, p, x):
-    newD = curientD - 1
-    ksy = 1
-    while curientD > newD:
-        newP = p.copy()
-        for i in range(len(newP)):
-            newP[i] = (1.0 - ksy / len(newP)) * newP[i]
-        newP.append(ksy / len(newP))
-        newM = makeM(x, newP)
-        newD = D_optim(newM)
-        ksy /= 2
-    return newP
-"""
-def addToP(currentA, p, x):
-    newA = currentA - 1
-    ksy = 1
-    while currentA > newA:
-        newP = p.copy()
-        for i in range(len(newP)):
-            newP[i] = (1.0 - ksy / len(newP)) * newP[i]
-        newP.append(ksy / len(newP))
-        newM = makeM(x, newP)
-        newA = A_optim(makeD(newM))
-        ksy /= 2
-    return newP
-
-#Добавление новой точки
-"""
-def addNewPoint(x, p, grid):
-    M = makeM(x, p)
-    D = makeD(M)
-    curientD = D_optim(M)
-    max, maxdot = findMaxFi(grid, D)
-    x.append(maxdot)
-    p = addToP(curientD, p, x)
-    eps = max * 0.01
-    print("max ", max)
-    delta = abs(max - np.trace(np.dot(M, D)))
-    print(delta)
-    return delta, eps, x, p
-
-
-def addNewPoint(x, p, grid):
-    M = makeM(x, p)
-    D = makeD(M)
-    currentA = A_optim(D)
-    min_f, mindot = findMinFi(grid, D)
-    x.append(mindot)
-    p = addToP(currentA, p, x)
-    eps = min_f * 0.01
-    print("min ", min_f)
-    delta = abs(min_f - np.trace(np.dot(np.linalg.matrix_power(D, -2), M)))
-    print(delta)
-    return delta, eps, x, p
-"""
-def addNewPoint(x, p, grid):
-    M = makeM(x, p)
-    D = makeD(M)
-    currentA = A_optim(D)
-    max, maxdot = findMaxFi(grid, D)
-    x.append(maxdot)
-    p = addToP(currentA, p, x)
-    eps = max * 0.01
-    print("max ", max)
-    delta = abs(max - np.trace(np.dot(M, D)))
-    print(delta)
-    return delta, eps, x, p
-
-
-
-#объединение близких точек
-def unionCloseDots(x, p):
-    newX = [x[0]]
-    newP = [p[0]]
-    for i in range(1, len(x)):
-        index = findClose(x[i], newX)
-        if index == -1:
-            newX.append(x[i])
-            newP.append(p[i])
-        else:
-            newP[index] += p[i]
-    x = newX
-    p = newP
-    return x, p
-
-#удаление точек с малыми весами
-def removeDotsWithSmallWeitgh(x, p):
-    sum = 0
-    index = 0
-    for i in range(len(p)):
-        if p[i] < 0.02:
-            sum += p[i]
-            p[i] = 0
-            x[i] = [0, 0]
-            index += 1
-    for i in range(index):
-        p.remove(0)
-        x.remove([0, 0])
-    sum /= len(p)
-    for i in range(len(p)):
-        p[i] += sum
-    return x, p
-
-first_input('input.txt')
-x, p = read("input.txt")
-grid = np.arange(-1, 1.005, 0.01)
-delta = 1
-eps = 0.01
-max = 0
-bigeps = 0.01
-exit = 1
 m = 6
-iteration = 1
-while abs(exit) > bigeps:
-    while delta > eps:
-        delta, eps, x, p = addNewPoint(x, p, grid)
+gamma = 2
 
-    if (iteration % 10 == 0):
-        write("first" + str(iteration) + ".txt", np.around(x, 5), np.around(p, 5))
-        #график сразу после нахождения всех точек
-        for i in x:
-            plt.scatter(i[0], i[1])
-        plt.show()
+# f(x) - это
+def f(a, b):
+    f = np.array([[1], [a], [b], [a * b], [a ** 2], [b ** 2]])
+    return f
 
-    x, p = unionCloseDots(x, p)
+# чтение плана из файла
+def read_plan():
+    x1 = []
+    x2 = []
+    p = []
+    with open("data2.json", "r") as f:
+        plans = json.load(f)["plan"]
+        for plan in plans:
+            x1.append(plan["x1"])
+            x2.append(plan["x2"])
+            p.append(plan["p"])
+        return x1, x2, p
 
-    if (iteration % 10 == 0):
-        write("second" + str(iteration) + ".txt", np.around(x, 5), np.around(p, 5))
-        #график после объединения
-        for i in x:
-            plt.scatter(i[0], i[1])
-        plt.show()
+# расчет матриц М, D
+def calc_M(c, d, p1, m):
+    M1 = np.zeros((m, m))
+    n = len(x1)
+    for q in range(0, n - 1):
+        M1 += p1[q] * f(c[q], d[q]) @ np.transpose(f(c[q], d[q]))
+    return M1
 
-    x, p = removeDotsWithSmallWeitgh(x, p)
+def calc_D(M1):
+    # Построение дисперсионной матрицы D
+    D1 = np.linalg.inv(M1)
+    return D1
 
-    if (iteration % 10 == 0):
-        write("third" + str(iteration) + ".txt", np.around(x, 5), np.around(p, 5))
-        #график после удаления
-        for i in x:
-            plt.scatter(i[0], i[1])
-        plt.show()
+# 2. найти глобальный экстремум: xs = arg max phi(x, es)
+def GlobExtr_2(D):
+    phiM = -100
+    xMax1 = 0
+    xMax2 = 0
+    l1 = -1
+    i1 = -1
+    while (i1 <= 1.0):
+        i2 = -1
+        while (i2 <= 1.0):
+            phi = np.transpose(f(i1, i2)) @ D @ D @ f(i1, i2) # A-plan
+            if (phiM <= phi):
+                phiM = phi
+                xMax1 = i1
+                xMax2 = i2
+                l1 += 1
+            i2 += 0.01
+        i1 += 0.01
+    return phiM, xMax1, xMax2
 
-    exit, bigeps, x, p = addNewPoint(x, p, grid)
+# 3. проверка необходимых и достаточных условий
+def Usl_3(phiM, x1M, x2M, a, b, M, D):
+    delta = np.abs(phiM) * 0.01
+    print("delta = ", delta)
+    d = np.abs(np.trace(D @ D @ M) - phiM) # A-plan
+    print("d = ", d)
+    alg = 1 if d <= delta else 0
+    return x1M, x2M, a, b, alg
 
-    print(exit, " ", bigeps)
-    iteration += 1
+# 4. составление нового плана
+def NewPlan_4(i1, i2, ps1, b1, b2, a1):
+    ns = len(ps1)
+    for w in range(0, ns):
+        ps1[w] = (1 - a1) * ps1[w]
+    
+    b1.append(i1)
+    b2.append(i2)
+    ps1 = np.append(ps1, a1)
+
+    print("len(x1) = ", len(b1), "x1:")
+    print("len(x2) = ", len(b2), "x2:")
+    print("len(p) = ", len(ps1), "p:")
+    return ps1, b1, b2
+
+# Создание графика
+def DrawGraph(a, b):
+    for i1 in range(0, len(a)):
+        plt.scatter(a[i1], b[i1])
+    plt.plot()
+    plt.show()
+
+
+x1, x2, p = read_plan()
+
+# 1. выбор плана e0, s = 0
+s = 0
+print("План e", s)
+M = []
+D = []
+
+while (True):
+    # 2 - глобальный экстремум
+    M = calc_M(x1, x2, p, m)
+    D = calc_D(M)
+
+    phiMax, x1Max, x2Max = GlobExtr_2(D)
+
+    # 3 - проверка условий -> alg opt
+    x1Max, x2Max, x1, x2, alg = Usl_3(phiMax, x1Max, x2Max, x1, x2, M, D)
+    
+    if (alg == 1):
+        print("alg opt")
+        print("x1 = ", x1)
+        print("x2 = ", x2)
+        print("p = ", p)
+        break
+
+    # 4 - новый план
+    a = 1 / (len(p))
+    p, x1, x2 = NewPlan_4(x1Max, x2Max, p, x1, x2, a)
+
+    # 5 - сравнение функционала
+    Ms = calc_M(x1, x2, p, m)
+    Ds = calc_D(Ms)
+    while (True):
+        if np.trace(Ds) > np.trace(D):
+            print("det(Ms) = ", np.linalg.det(Ms), "det(M) = ", np.linalg.det(M))
+            a /= gamma
+            print("a = ", a)
+            p, x1, x2 = NewPlan_4(x1Max, x2Max, p, x1, x2, a)
+            Ms = calc_M(x1, x2, p, m)
+            Ds = calc_D(Ms)
+        else:
+            break
+    
+    s += 1
+    M = calc_M(x1, x2, p, m)
+    D = calc_D(M)
+    print("s = ", s)
+    if(s == 0 or s == 1 or s % 200 == 0):
+        print("len(x1) = ", len(x1), "x1:")
+        print(x1)
+        print("len(x2) = ", len(x2), "x2:")
+        print(x2)
+        print("len(p) = ", len(p), "p:")
+        print(p)
+        print("Проверка на оптимальность - неочищенный план A")
+        print("Правая часть: ", np.trace(D))
+        print("Левая часть: ", np.trace(D @ D @ M))
+
+M = calc_M(x1, x2, p, m)
+D = calc_D(M)
+
+#Проверка на оптимальность
+print("Первая проверка на оптимальность - неочищенный план A")
+print("Правая часть: ", np.trace(D))
+print("Левая часть: ", np.trace(D @ D @ M))
+
+newX1 = [0]
+newX2 = [0]
+newP = [0]
+newX1[0] = x1[0]
+newX2[0] = x2[0]
+newP[0] = p[0]
+mu = 0.1
+pi = 0.02
+k = len(x1)
+r = 0
+i = 1
+print("sum p = ", np.sum(p))
+
+while (True):
+    if r >= len(p) - 1:
+        break
+        
+    while (i < len(p)):
+        scal = (x1[r] - x1[i])**2 + (x2[r] - x2[i])**2 #скаляр
+        if scal <= mu: #проверка на близость
+            p[r] += p[i] #добавление веса к точке
+            p = np.delete(p, i)
+            x1 = np.delete(x1, i)
+            x2 = np.delete(x2, i)
+            i -= 1
+        i += 1
+    r += 1
+    i = r + 1
+
+print("I did Clean1")
+
+print("len(x1) = ", len(x1), "x1:")
+print(x1)
+print("len(x2) = ", len(x2), "x2:")
+print(x2)
+print("len(p) = ", len(p), "p:")
+print(p)
+
+sumP = 0
+newX1 = x1
+newX2 = x2
+newP = p
+for i in range(1, len(newP)): #найти в массиве р малые веса
+    if (newP[i] <= pi):
+        sumP += newP[i] #сумма малых весов
+        newP[i] = 0
+
+newX11 = []
+newX21 = []
+newP1 = []
+for i in range(0, len(newP)): #удаление из массивов элементов с нулевыми весами
+    if newP[i] != 0:
+        newP1.append(newP[i])
+        newX11.append(newX1[i])
+        newX21.append(newX2[i])
+
+p = newP1
+x1 = newX11
+x2 = newX21
+
+sumP = sumP/len(p)
+
+print("Im finish")
+M = calc_M(x1, x2, p, m)
+D = calc_D(M)
+
+#Проверка на оптимальность
+print("Вторая проверка на оптимальность - очищенный план A")
+print("Правая часть: ", np.trace(D))
+print("Левая часть: ", np.trace(D @ D @ M))
+DrawGraph(x1, x2)
+
+print("len(x1) = ", len(x1), "x1:")
+print(x1)
+print("len(x2) = ", len(x2), "x2:")
+print(x2)
+print("len(p) = ", len(p), "p:")
+print(p)
