@@ -169,8 +169,8 @@ k = len(x1)
 r = 0
 i = 1
 print("sum p = ", np.sum(p))
-exit()
-while True:
+
+while (True):
     if r >= len(p) - 1:
         break
 
