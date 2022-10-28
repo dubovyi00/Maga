@@ -25,7 +25,7 @@ def read_plan():
             p.append(plan["p"])
         return x1, x2, p
 
-# расчет матриц М, D
+# Построение матрицы M
 def calc_M(c, d, p1, m):
     M1 = np.zeros((m, m))
     n = len(x1)
@@ -33,8 +33,8 @@ def calc_M(c, d, p1, m):
         M1 += p1[q] * f(c[q], d[q]) @ np.transpose(f(c[q], d[q]))
     return M1
 
+# Построение дисперсионной матрицы D
 def calc_D(M1):
-    # Построение дисперсионной матрицы D
     D1 = np.linalg.inv(M1)
     return D1
 
@@ -137,7 +137,7 @@ while (True):
     M = calc_M(x1, x2, p, m)
     D = calc_D(M)
     print("s = ", s)
-    if(s == 0 or s == 1 or s % 200 == 0):
+    if (s == 1 or s % 250 == 0):
         print("len(x1) = ", len(x1), "x1:")
         print(x1)
         print("len(x2) = ", len(x2), "x2:")
@@ -185,7 +185,7 @@ while (True):
     r += 1
     i = r + 1
 
-print("I did Clean1")
+print("Выполняется очистка плана")
 
 print("len(x1) = ", len(x1), "x1:")
 print(x1)
@@ -218,7 +218,7 @@ x2 = newX21
 
 sumP = sumP/len(p)
 
-print("Im finish")
+print("План очищен!")
 M = calc_M(x1, x2, p, m)
 D = calc_D(M)
 
