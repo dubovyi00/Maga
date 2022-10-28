@@ -7,23 +7,23 @@ gamma = 2
 
 
 # f(x)
-def f(a, b):
-    f_ = np.array([[1], [a], [b], [a * b], [a ** 2], [b ** 2]])
+def f(a_, b_):
+    f_ = np.array([[1], [a_], [b_], [a_ * b_], [a_ ** 2], [b_ ** 2]])
     return f_
 
 
 # чтение плана из файла
 def read_plan():
-    with open("data2.json", "r") as f:
+    with open("data2.json", "r") as file:
         x1_ = []
         x2_ = []
-        p = []
-        plans = json.load(f)["plan"]
+        p_ = []
+        plans = json.load(file)["plan"]
         for plan in plans:
             x1_.append(plan["x1"])
             x2_.append(plan["x2"])
-            p.append(plan["p"])
-        return x1_, x2_, p
+            p_.append(plan["p"])
+        return x1_, x2_, p_
 
 
 # Построение матрицы M
@@ -42,7 +42,7 @@ def get_mat_d(mat_m):
 
 
 # 2. найти глобальный экстремум
-def get_global_max(D):
+def get_global_max(mat_d):
     phi_max = -100
     argmax_x1 = 0
     argmax_x2 = 0
@@ -51,7 +51,7 @@ def get_global_max(D):
     while i1 <= 1.0:
         i2 = -1
         while i2 <= 1.0:
-            phi = (np.transpose(f(i1, i2)) @ D @ D @ f(i1, i2)).item()  # A-plan
+            phi = (np.transpose(f(i1, i2)) @ mat_d @ mat_d @ f(i1, i2)).item()  # A-plan
             if phi_max < phi:
                 phi_max = phi
                 argmax_x1 = i1
@@ -63,10 +63,10 @@ def get_global_max(D):
 
 
 # 3. проверка необходимых и достаточных условий
-def check_condition(phiM, M, D):
-    delta = np.abs(phiM) * 0.01
+def check_condition(phi_, mat_m, mat_d):
+    delta = np.abs(phi_) * 0.01
     print("delta = ", delta)
-    d = np.abs(np.trace(D @ D @ M) - phiM)  # A-plan
+    d = np.abs(np.trace(mat_d @ mat_d @ mat_m) - phi_)  # A-plan
     print("d = ", d)
     return d <= delta
 
@@ -88,9 +88,9 @@ def create_plan(i1, i2, ps1, b1, b2, a1):
 
 
 # Создание графика
-def show_scatter(a, b):
-    for i1 in range(0, len(a)):
-        plt.scatter(a[i1], b[i1])
+def show_scatter(a_, b_):
+    for i1 in range(0, len(a_)):
+        plt.scatter(a_[i1], b_[i1])
     plt.plot()
     plt.show()
 
@@ -175,7 +175,7 @@ while True:
         break
 
     while i < len(p):
-        scalar = (x1[r] - x1[i]) ** 2 + (x2[r] - x2[i]) ** 2  # скаляр
+        scalar = (x1[r] - x1[i]) ** 2 + (x2[r] - x2[i]) ** 2
         if scalar <= mu:  # проверка на близость
             p[r] += p[i]  # добавление веса к точке
             p = np.delete(p, i)
@@ -225,7 +225,6 @@ print("Вторая проверка на оптимальность - очищ�
 print("Правая часть: ", np.trace(D))
 print("Левая часть: ", np.trace(D @ D @ M))
 show_scatter(x1, x2)
-
 
 print("len(x1) = ", len(x1), "x1:\n", x1)
 print("len(x2) = ", len(x2), "x2:\n", x2)
